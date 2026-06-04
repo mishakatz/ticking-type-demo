@@ -76,8 +76,10 @@
   }
 
   // --- Фон страницы из кромки циферблата (раздел 10) -----------------------
-  // Усредняем цвет по тонкой рамке по периметру изображения (не один пиксель —
-  // устойчиво к лёгкой текстуре). Альфа-взвешенно: прозрачные пиксели не врут.
+  // Берём МЕДИАНУ цвета по тонкой рамке по периметру (по каждому каналу), а не
+  // среднее: если графика циферблата доходит до края, тёмные штрихи в рамке
+  // тянут среднее в грязный тон, а медиана берёт доминирующий цвет поля.
+  // Прозрачные пиксели пропускаем — под ними проступает вычисляемый фон.
   const COLOR_CANVAS = document.createElement('canvas');
   const SAMPLE = 128;        // во столько ужимаем картинку для семпла
   const BAND = 0.08;         // толщина рамки = 8% стороны
@@ -100,24 +102,23 @@
     }
 
     const band = Math.max(1, Math.round(SAMPLE * BAND));
-    let r = 0, g = 0, b = 0, a = 0;
+    const R = [], G = [], B = [];
     for (let y = 0; y < SAMPLE; y++) {
       const onEdgeRow = y < band || y >= SAMPLE - band;
       for (let x = 0; x < SAMPLE; x++) {
         const onEdge = onEdgeRow || x < band || x >= SAMPLE - band;
         if (!onEdge) continue;
         const i = (y * SAMPLE + x) * 4;
-        const al = data[i + 3];
-        if (al === 0) continue;          // прозрачное — пропускаем
-        const w = al / 255;
-        r += data[i]     * w;
-        g += data[i + 1] * w;
-        b += data[i + 2] * w;
-        a += w;
+        if (data[i + 3] === 0) continue;  // прозрачное — пропускаем
+        R.push(data[i]); G.push(data[i + 1]); B.push(data[i + 2]);
       }
     }
-    if (a === 0) return null;            // вся кромка прозрачна — фон не трогаем
-    return `rgb(${Math.round(r / a)}, ${Math.round(g / a)}, ${Math.round(b / a)})`;
+    if (R.length === 0) return null;      // вся кромка прозрачна — фон не трогаем
+    const median = (arr) => {
+      arr.sort((p, q) => p - q);
+      return arr[arr.length >> 1];
+    };
+    return `rgb(${median(R)}, ${median(G)}, ${median(B)})`;
   }
 
   function applyBackground(dial) {
