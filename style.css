@@ -1,0 +1,95 @@
+/* Ticking Type — аналоговые часы, статическое демо.
+   Пять слоёв одного размера друг на друга, всё масштабируется со сценой. */
+
+:root {
+  /* Цвет всех стрелок и колпачка. v1 — фиксированное значение.
+     Перекраска под светлоту циферблата = смена одной этой переменной. */
+  --hand-color: #1b1b1b;
+
+  /* Фон страницы. Вычисляется из кромки циферблата в clock.js.
+     Плавный переход при листании — раздел 10 брифа. */
+  --page-bg: #d8d8d8;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--page-bg);
+  transition: background-color 0.5s ease;
+  cursor: pointer;                 /* весь экран кликабелен — листание */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Сцена — квадрат со стороной min(ширина, высота окна), по центру. */
+.scene {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
+  transform: translate(-50%, -50%);
+
+  /* Скрыта, пока не готов первый циферблат, затем мягкий fade-in. */
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.scene.is-ready { opacity: 1; }
+
+/* Каждый слой занимает весь квадрат сцены. */
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dial {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;             /* циферблат квадратный, как и сцена */
+}
+
+/* Стрелки и колпачок.
+   Внешний .layer несёт drop-shadow с ФИКСИРОВАННЫМ смещением (свет неподвижен
+   в координатах экрана) — тень не вращается со стрелкой, потому что вращается
+   только вложенный .layer__rot. Смещения --sx/--sy/--sblur ставит clock.js
+   в px пропорционально стороне сцены; цвет/прозрачность --scolor задан ниже. */
+.hand,
+.cap {
+  color: var(--hand-color);
+  filter: drop-shadow(var(--sx, 0px) var(--sy, 0px) var(--sblur, 0px) var(--scolor, transparent));
+}
+
+[data-hand="hour"]   { --scolor: rgba(0, 0, 0, 0.25); }
+[data-hand="minute"] { --scolor: rgba(0, 0, 0, 0.28); }
+[data-hand="second"] { --scolor: rgba(0, 0, 0, 0.30); }
+[data-hand="cap"]    { --scolor: rgba(0, 0, 0, 0.30); }
+
+/* Вращающийся внутренний слой. Точка опоры — геометрический центр. */
+.layer__rot {
+  width: 100%;
+  height: 100%;
+  transform: rotate(var(--angle, 0deg));
+  transform-origin: 50% 50%;
+}
+
+/* Inline SVG стрелок наследует размер слоя; fill = currentColor. */
+.layer__rot svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene { transition: none; }
+  body { transition: none; }
+}
