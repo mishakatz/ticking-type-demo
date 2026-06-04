@@ -9,7 +9,10 @@
 <body>
   <!-- Сцена: квадрат min(vw,vh) по центру. Пять слоёв друг на друга. -->
   <main class="scene" id="scene" aria-hidden="true">
-    <img class="layer dial" id="dial" alt="" decoding="async">
+    <!-- Два слоя циферблата для кроссфейда: новый проявляется поверх текущего
+         синхронно с заливкой фона, без промежуточного «моргающего» кадра. -->
+    <img class="layer dial" id="dial-a" alt="" decoding="async">
+    <img class="layer dial" id="dial-b" alt="" decoding="async">
 
     <!-- Стрелки и колпачок: внешний .layer несёт неподвижную тень,
          внутренний .layer__rot вращается. Inline SVG вставляет clock.js. -->

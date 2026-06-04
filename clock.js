@@ -23,7 +23,10 @@
 
   // --- DOM -----------------------------------------------------------------
   const scene  = document.getElementById('scene');
-  const dialEl = document.getElementById('dial');
+  const dialEls = [
+    document.getElementById('dial-a'),
+    document.getElementById('dial-b'),
+  ];
   const rot = {
     hour:   document.querySelector('[data-hand="hour"]   .layer__rot'),
     minute: document.querySelector('[data-hand="minute"] .layer__rot'),
@@ -167,11 +170,41 @@
   let displayIndex = 0;
   let targetIndex = 0;
   let stepping = false;
+  let frontIdx = 0;             // какой из двух слоёв сейчас виден
+  let fadeTimer = null;
+  const CROSSFADE_MS = 500;     // синхронно с transition фона (раздел 10)
 
-  function showDial(index) {
+  // Циферблат и фон меняются ОДНОВРЕМЕННО: новый циферблат проявляется
+  // кроссфейдом поверх текущего за те же 0.5s, что и заливка фона. Без этого
+  // картинка успевала смениться раньше фона — был двойной «моргающий» кадр.
+  function showDial(index, animate) {
     const d = dials[index];
-    dialEl.src = d.src;
-    applyBackground(d);
+    const front = dialEls[frontIdx];
+    const back  = dialEls[1 - frontIdx];
+
+    if (!animate) {                       // первый показ — без кроссфейда
+      front.src = d.src;
+      front.style.opacity = '1';
+      front.classList.add('is-top');
+      applyBackground(d);
+      return;
+    }
+
+    // Скрытый буфер всегда лежит на opacity 0 (его погасил прошлый цикл), так
+    // что достаточно подставить уже декодированную картинку и переключить
+    // opacity в 1 — CSS-переход проявит её за 0.5s, синхронно с заливкой фона.
+    back.src = d.src;
+    back.classList.add('is-top');         // входящий слой поверх уходящего
+    front.classList.remove('is-top');
+    back.style.opacity = '1';             // плавно проявляем циферблат...
+    applyBackground(d);                   // ...и фон тем же переходом 0.5s
+
+    // По завершении гасим ушедший слой — он станет буфером для следующей смены.
+    clearTimeout(fadeTimer);
+    const leaving = front;
+    fadeTimer = setTimeout(() => { leaving.style.opacity = '0'; }, CROSSFADE_MS);
+
+    frontIdx = 1 - frontIdx;
   }
 
   async function step() {
@@ -180,7 +213,7 @@
     while (displayIndex !== targetIndex) {
       const next = (displayIndex + 1) % dials.length;
       await dials[next].decoded;        // ждём готовности, текущий остаётся виден
-      showDial(next);
+      showDial(next, true);
       displayIndex = next;
     }
     stepping = false;
@@ -241,8 +274,9 @@
       return;
     }
 
-    showDial(0);
-    requestAnimationFrame(() => scene.classList.add('is-ready')); // мягкий fade-in
+    showDial(0, false);
+    void scene.offsetWidth;            // зафиксировать стартовую opacity:0
+    scene.classList.add('is-ready');   // мягкий fade-in (без зависимости от rAF)
 
     // Остальные догружаем в фоне, старт не блокируют.
     for (let i = 1; i < entries.length; i++) {

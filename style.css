@@ -51,12 +51,19 @@ body {
   height: 100%;
 }
 
+/* Стрелки и колпачок всегда поверх обоих слоёв циферблата. */
+[data-hand] { z-index: 3; }
+
 .dial {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;             /* циферблат квадратный, как и сцена */
+  z-index: 1;
+  opacity: 0;                      /* видимый слой включает clock.js */
+  transition: opacity 0.5s ease;   /* кроссфейд, синхронно с заливкой фона */
 }
+.dial.is-top { z-index: 2; }       /* входящий слой поверх уходящего */
 
 /* Стрелки и колпачок.
    Внешний .layer несёт drop-shadow с ФИКСИРОВАННЫМ смещением (свет неподвижен
@@ -91,5 +98,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .scene { transition: none; }
+  .dial { transition: none; }
   body { transition: none; }
 }
